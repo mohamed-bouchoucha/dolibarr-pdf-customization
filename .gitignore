@@ -1,0 +1,15 @@
+# Dolibarr
+htdocs/
+documents/
+conf/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
