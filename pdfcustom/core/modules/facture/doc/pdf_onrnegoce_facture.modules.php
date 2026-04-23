@@ -10,6 +10,7 @@
 // Nécessaire pour hériter des méthodes parentes de Dolibarr
 require_once DOL_DOCUMENT_ROOT.'/core/modules/facture/modules_facture.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/pdf.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 
 /**
  * Class pdf_onrnegoce_facture
@@ -139,6 +140,49 @@ class pdf_onrnegoce_facture extends ModelePDFFactures
         $pdf->Cell($wTotalVal, 10, price($object->total_ttc).' '. $outputlangs->trans("Currency".$conf->currency), 0, 1, 'R', 1);
         $pdf->SetTextColor(0, 0, 0);
         // --- FIN DE LA SECTION TABLEAU ---
+
+        // --- BLOC INFORMATIONS COMPLÉMENTAIRES (EXTRAFIELDS) ---
+        $extrafields = new ExtraFields($this->db);
+        $extralabels = $extrafields->fetch_name_optionals_label($object->table_element);
+        $object->fetch_optionals();
+
+        // Récupération des valeurs
+        $val_ref_cmd = $object->array_options['options_ref_commande_client'] ?? '';
+        $val_mode_liv = $object->array_options['options_mode_livraison'] ?? '';
+        $val_check_val = !empty($object->array_options['options_validation_client']) ? $outputlangs->trans("Yes") : '';
+
+        // On ne montre le bloc que si au moins un champ est rempli
+        if (!empty($val_ref_cmd) || !empty($val_mode_liv) || !empty($val_check_val)) {
+            $curY = $pdf->GetY() + 10;
+            if ($curY > 230) { $pdf->AddPage(); $curY = 20; }
+
+            $pdf->SetFont('', 'B', 10);
+            $pdf->SetXY(10, $curY);
+            $pdf->SetFillColor(245, 247, 250);
+            $pdf->Cell(190, 8, "Informations complémentaires", 'B', 1, 'L', 1);
+            $curY += 10;
+
+            $pdf->SetFont('', '', 9);
+            // Colonne 1
+            if (!empty($val_ref_cmd)) {
+                $pdf->SetXY(10, $curY);
+                $pdf->SetFont('', 'B', 9); $pdf->Cell(45, 5, $extralabels['ref_commande_client'] . " :", 0, 0, 'L');
+                $pdf->SetFont('', '', 9); $pdf->Cell(50, 5, $val_ref_cmd, 0, 0, 'L');
+            }
+            if (!empty($val_check_val)) {
+                $pdf->SetXY(10, $curY + 6);
+                $pdf->SetFont('', 'B', 9); $pdf->Cell(45, 5, $extralabels['validation_client'] . " :", 0, 0, 'L');
+                $pdf->SetFont('', '', 9); $pdf->Cell(50, 5, $val_check_val, 0, 0, 'L');
+            }
+
+            // Colonne 2 (Mode livraison)
+            if (!empty($val_mode_liv)) {
+                $pdf->SetXY(105, $curY);
+                $pdf->SetFont('', 'B', 9); $pdf->Cell(45, 5, $extralabels['mode_livraison'] . " :", 0, 0, 'L');
+                // showOutputField permet de récupérer le label de la liste de sélection au lieu de la clé
+                $pdf->SetFont('', '', 9); $pdf->Cell(50, 5, $extrafields->showOutputField('mode_livraison', $val_mode_liv, '', $object->table_element), 0, 0, 'L');
+            }
+        }
 
         $this->_pagefoot($pdf, $object, $outputlangs);
 

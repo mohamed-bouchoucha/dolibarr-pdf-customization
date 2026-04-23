@@ -9,6 +9,7 @@
 
 require_once DOL_DOCUMENT_ROOT.'/core/modules/expedition/modules_expedition.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/pdf.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 
 class pdf_onrnegoce_expedition extends ModelePdfExpedition
 {
@@ -128,6 +129,41 @@ class pdf_onrnegoce_expedition extends ModelePdfExpedition
         $pdf->Cell($wTotalVal, 10, price($object->total_ttc).' '. $outputlangs->trans("Currency".$conf->currency), 0, 1, 'R', 1);
         $pdf->SetTextColor(0, 0, 0);
         // --- FIN DE LA SECTION TABLEAU ---
+
+        // --- BLOC INFORMATIONS COMPLÉMENTAIRES (EXTRAFIELDS) ---
+        $extrafields = new ExtraFields($this->db);
+        $extralabels = $extrafields->fetch_name_optionals_label($object->table_element);
+        $object->fetch_optionals();
+
+        $val_ref_cmd = $object->array_options['options_ref_commande_client'] ?? '';
+        $val_mode_liv = $object->array_options['options_mode_livraison'] ?? '';
+        $val_check_val = !empty($object->array_options['options_validation_client']) ? $outputlangs->trans("Yes") : '';
+
+        if (!empty($val_ref_cmd) || !empty($val_mode_liv) || !empty($val_check_val)) {
+            $curY = $pdf->GetY() + 10;
+            if ($curY > 230) { $pdf->AddPage(); $curY = 20; }
+
+            $pdf->SetFont('', 'B', 10); $pdf->SetXY(10, $curY); $pdf->SetFillColor(245, 247, 250);
+            $pdf->Cell(190, 8, "Informations complémentaires", 'B', 1, 'L', 1);
+            $curY += 10;
+
+            $pdf->SetFont('', '', 9);
+            if (!empty($val_ref_cmd)) {
+                $pdf->SetXY(10, $curY);
+                $pdf->SetFont('', 'B', 9); $pdf->Cell(45, 5, $extralabels['ref_commande_client'] . " :", 0, 0, 'L');
+                $pdf->SetFont('', '', 9); $pdf->Cell(50, 5, $val_ref_cmd, 0, 0, 'L');
+            }
+            if (!empty($val_check_val)) {
+                $pdf->SetXY(10, $curY + 6);
+                $pdf->SetFont('', 'B', 9); $pdf->Cell(45, 5, $extralabels['validation_client'] . " :", 0, 0, 'L');
+                $pdf->SetFont('', '', 9); $pdf->Cell(50, 5, $val_check_val, 0, 0, 'L');
+            }
+            if (!empty($val_mode_liv)) {
+                $pdf->SetXY(105, $curY);
+                $pdf->SetFont('', 'B', 9); $pdf->Cell(45, 5, $extralabels['mode_livraison'] . " :", 0, 0, 'L');
+                $pdf->SetFont('', '', 9); $pdf->Cell(50, 5, $extrafields->showOutputField('mode_livraison', $val_mode_liv, '', $object->table_element), 0, 0, 'L');
+            }
+        }
 
         $this->_pagefoot($pdf, $object, $outputlangs);
         $pdf->Output($file, 'F');
