@@ -108,6 +108,7 @@ class modPdfcustom extends DolibarrModules
             'onrnegoce_commande'   => 'order',
             'onrnegoce_propale'    => 'propal',
             'onrnegoce_expedition' => 'shipping',
+            'onrnegoce_livraison'  => 'shipping',
         );
 
         $sql = array();
@@ -137,6 +138,7 @@ class modPdfcustom extends DolibarrModules
             'onrnegoce_commande'   => 'order',
             'onrnegoce_propale'    => 'propal',
             'onrnegoce_expedition' => 'shipping',
+            'onrnegoce_livraison'  => 'shipping',
         );
 
         $sql = array();
