@@ -51,9 +51,83 @@ class pdf_onrnegoce_expedition extends ModelePdfExpedition
 
         $this->_pagehead($pdf, $object, 1, $outputlangs);
 
-        $pdf->SetFont('', 'B', 12);
-        $pdf->SetXY(10, 100);
-        $pdf->MultiCell(0, 10, "BON D'EXPÉDITION - MODÈLE ONR NEGOCE", 1, 'C');
+        // --- DÉBUT DE LA SECTION TABLEAU DES LIGNES ---
+        $curY = 120; 
+        $col1 = 10;  $w1 = 30;  // Réf
+        $col2 = 40;  $w2 = 70;  // Désignation
+        $col3 = 110; $w3 = 15;  // Qté
+        $col4 = 125; $w4 = 25;  // P.U. HT
+        $col5 = 150; $w5 = 15;  // Remise %
+        $col6 = 165; $w6 = 35;  // Total HT
+        
+        // 1. EN-TÊTE DU TABLEAU (#1A2B5E)
+        $pdf->SetFillColor(26, 43, 94);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetDrawColor(26, 43, 94);
+        $pdf->SetFont('', 'B', 9);
+        
+        $pdf->SetXY($col1, $curY);
+        $pdf->Cell($w1, 8, "Réf", 1, 0, 'L', 1);
+        $pdf->Cell($w2, 8, "Désignation", 1, 0, 'L', 1);
+        $pdf->Cell($w3, 8, "Qté", 1, 0, 'C', 1);
+        $pdf->Cell($w4, 8, "P.U. HT", 1, 0, 'R', 1);
+        $pdf->Cell($w5, 8, "Rem. %", 1, 0, 'C', 1);
+        $pdf->Cell($w6, 8, "Total HT", 1, 1, 'R', 1);
+        
+        $curY = $pdf->GetY();
+        $pdf->SetTextColor(0, 0, 0);
+        $fill = false; 
+        
+        foreach ($object->lines as $line) {
+            if ($curY > 250) { $pdf->AddPage(); $curY = 20; if ($this->_pagehead($pdf, $object, 1, $outputlangs)) $curY = $pdf->GetY() + 5; }
+
+            $pdf->SetFillColor(245, 247, 250);
+            $tmpDesignation = !empty($line->description) ? $line->label."\n".$line->description : $line->label;
+            $nbLines = $pdf->getNumLines($tmpDesignation, $w2);
+            $lineHeight = max(7, $nbLines * 5); 
+
+            if ($line->product_type == 9) {
+                $pdf->SetFont('', 'I', 9);
+                $pdf->SetTextColor(100, 100, 100);
+                $pdf->SetXY($col1, $curY);
+                $pdf->MultiCell($w1 + $w2 + $w3 + $w4 + $w5 + $w6, $lineHeight, $line->label, 'LRB', 'L', $fill);
+            } 
+            else {
+                $pdf->SetFont('', ($line->product_type == 1 ? 'I' : ''), 9); 
+                if ($fill) $pdf->Rect($col1, $curY, 190, $lineHeight, 'F');
+
+                $pdf->SetXY($col1, $curY); $pdf->MultiCell($w1, $lineHeight, $line->ref, 'LR', 'L');
+                $pdf->SetXY($col2, $curY); $pdf->MultiCell($w2, $lineHeight, $tmpDesignation, 'R', 'L');
+                $pdf->SetXY($col3, $curY); $pdf->MultiCell($w3, $lineHeight, $line->qty, 'R', 'C');
+                $pdf->SetXY($col4, $curY); $pdf->MultiCell($w4, $lineHeight, price($line->subprice), 'R', 'R');
+                $pdf->SetXY($col5, $curY); 
+                if ($line->remise_percent > 0) $pdf->SetTextColor(255, 0, 0);
+                $pdf->MultiCell($w5, $lineHeight, ($line->remise_percent > 0 ? $line->remise_percent.'%' : ''), 'R', 'C');
+                $pdf->SetTextColor(0, 0, 0); 
+                $pdf->SetXY($col6, $curY); $pdf->SetFont('', 'B', 9); $pdf->MultiCell($w6, $lineHeight, price($line->total_ht), 'R', 'R');
+            }
+            $curY += $lineHeight;
+            $fill = !$fill;
+            $pdf->SetFont('', '', 9);
+        }
+        $pdf->Line($col1, $curY, $col1 + 190, $curY);
+
+        $curY += 10;
+        if ($curY > 230) { $pdf->AddPage(); $curY = 20; }
+        $wTotalLabel = 40; $wTotalVal = 35; $rightPos = $col1 + 190 - $wTotalLabel - $wTotalVal;
+
+        $pdf->SetFont('', 'B', 10);
+        $pdf->SetXY($rightPos, $curY); $pdf->SetFillColor(245, 247, 250); $pdf->Cell($wTotalLabel, 8, "Total HT", 0, 0, 'L', 1);
+        $pdf->Cell($wTotalVal, 8, price($object->total_ht).' '. $outputlangs->trans("Currency".$conf->currency), 0, 1, 'R', 1);
+        
+        $curY += 8; $pdf->SetXY($rightPos, $curY); $pdf->Cell($wTotalLabel, 8, "TVA", 0, 0, 'L', 0);
+        $pdf->Cell($wTotalVal, 8, price($object->total_tva).' '. $outputlangs->trans("Currency".$conf->currency), 0, 1, 'R', 0);
+
+        $curY += 10; $pdf->SetXY($rightPos, $curY); $pdf->SetFillColor(26, 43, 94); $pdf->SetTextColor(255, 255, 255);
+        $pdf->Cell($wTotalLabel, 10, "TOTAL TTC", 0, 0, 'L', 1); $pdf->SetFont('', 'B', 12);
+        $pdf->Cell($wTotalVal, 10, price($object->total_ttc).' '. $outputlangs->trans("Currency".$conf->currency), 0, 1, 'R', 1);
+        $pdf->SetTextColor(0, 0, 0);
+        // --- FIN DE LA SECTION TABLEAU ---
 
         $this->_pagefoot($pdf, $object, $outputlangs);
         $pdf->Output($file, 'F');
