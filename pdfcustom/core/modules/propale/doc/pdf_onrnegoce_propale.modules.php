@@ -165,6 +165,8 @@ class pdf_onrnegoce_propale extends ModelePDFPropales
             }
         }
 
+        $this->_signatureBlock($pdf, $object, $outputlangs);
+
         $this->_pagefoot($pdf, $object, $outputlangs);
         $pdf->Output($file, 'F');
         return 1;
@@ -269,5 +271,25 @@ class pdf_onrnegoce_propale extends ModelePDFPropales
         
         $pagetext = $outputlangs->transnoentities("Page") . " " . $pdf->getAliasNumPage() . " / " . $pdf->getAliasNbPages();
         $pdf->MultiCell(0, 4, $pagetext, 0, 'C');
+    }
+
+    protected function _signatureBlock(&$pdf, $object, $outputlangs)
+    {
+        global $conf;
+        $show_signature = !empty($object->array_options['options_show_signature']);
+        if ($object->element != 'propal' && $show_signature != 1) return;
+        $curY = $pdf->GetY() + 15;
+        if ($curY > 220) { $pdf->AddPage(); $curY = 20; }
+        $pdf->SetFont('', 'B', 9); $w = 90;
+        $pdf->SetXY(10, $curY); $pdf->MultiCell($w, 5, "Bon pour accord – Cachet et signature client", 0, 'L');
+        $boxY = $pdf->GetY() + 2; $pdf->Rect(10, $boxY, $w, 25);
+        $pdf->SetXY(10, $boxY + 27); $pdf->SetFont('', '', 9);
+        $pdf->Cell($w, 5, "Date : .... / .... / 20....", 0, 0, 'L');
+        $pdf->SetXY(110, $curY); $pdf->SetFont('', 'B', 9);
+        $pdf->MultiCell($w, 5, "Signature et cachet entreprise", 0, 'L');
+        $logo_sig = $conf->mycompany->dir_output . '/logos/' . $conf->mycompany->logo_squarred;
+        if (!empty($conf->mycompany->logo_squarred) && is_readable($logo_sig)) {
+            $pdf->Image($logo_sig, 125, $boxY, 0, 20);
+        } else { $pdf->Rect(110, $boxY, $w, 25); }
     }
 }
