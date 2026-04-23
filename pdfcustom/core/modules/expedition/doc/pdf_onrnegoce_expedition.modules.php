@@ -39,7 +39,7 @@ class pdf_onrnegoce_expedition extends ModelePdfExpedition
         $pdf = pdf_getInstance($this->format);
         $pdf->SetTitle($outputlangs->convToOutputCharset($object->ref));
         $pdf->SetMargins(10, 10, 10);
-        $pdf->setAutoPageBreak(true, 25);
+        $pdf->setAutoPageBreak(true, 30);
         $pdf->AddPage();
 
         $this->_pagehead($pdf, $object, 1, $outputlangs);
@@ -60,7 +60,8 @@ class pdf_onrnegoce_expedition extends ModelePdfExpedition
 
         $pdf->SetTextColor(0,0,0); $pdf->SetFont('', '', 9);
         $fill = false;
-        foreach ($object->lines as $line) {
+        if (!empty($object->lines)) {
+            foreach ($object->lines as $line) {
             $nbLines = $pdf->getNumLines($line->label, $w2);
             $lineHeight = max(7, $nbLines * 5);
             if ($pdf->GetY() + $lineHeight > 245) $pdf->AddPage();
@@ -74,6 +75,7 @@ class pdf_onrnegoce_expedition extends ModelePdfExpedition
             $pdf->SetXY($col4, $startY); $pdf->MultiCell($w4, $lineHeight, $line->qty_shipped, 'LR', 'C');
             $pdf->SetY($startY + $lineHeight);
             $fill = !$fill;
+        }
         }
         $pdf->Line(10, $pdf->GetY(), 200, $pdf->GetY());
 
